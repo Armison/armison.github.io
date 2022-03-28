@@ -39,6 +39,14 @@ Critical Jekyll-related code are located in `_include/` and `_layouts/`. Most of
 This theme uses the default code syntax highlighter of jekyll, [Rouge](http://rouge.jneen.net/), which is compatible with Pygments theme so just pick any pygments theme css (e.g. from [here](http://jwarby.github.io/jekyll-pygments-themes/languages/javascript.html) and replace the content of `highlight.less`.
 
 
+```sh
+npm install grunt --save-dev
+npm install grunt-contrib-jshint --save-dev
+npm install -g grunt-cli 
+
+grunt
+```
+
 # License
 Apache License 2.0
 Copyright (c) 2022-present Armison
