@@ -1,3 +1,12 @@
+---
+layout: post
+title: "Rendering a Scene with Deferred Lighting"
+subtitle: "Apple sample analysis"
+date: 2022-04-01
+author: "Armison.Huang"
+header-img: "img/post-bg.jpg"
+tags: []
+---
 # 2022-03-29 Rendering a Scene with Deferre
 
 Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减少光照的重复计算，通过实施延时光照渲染来进行优化。

@@ -1,7 +1,7 @@
 # Site settings
 title: Armison Blog
 SEOTitle: Armison的博客 | Armison Blog
-header-img: img/home-bg.jpeg
+header-img: img/home-bg.png
 email: armison.huang@qq.com
 description: "Just for GPU"
 keyword: "GPU, Armison"
@@ -12,9 +12,9 @@ baseurl: ""                             # for example, '/blog' if your blog host
 future: true
 
 # SNS settings
-RSS: false
+RSS: true
 #weibo_username:     armison
-zhihu_username:     armison
+zhihu_username:     mimijava
 github_username:    armison
 #twitter_username:   armison
 #facebook_username:  armison
@@ -59,7 +59,7 @@ kramdown:
 
 
 # Disqus settings
-disqus_username: armison
+disqus_username: false
 
 # Netease settings
 netease_comment: false
