@@ -4,14 +4,14 @@ title: "Rendering a Scene with Deferred Lighting"
 subtitle: "Apple sample analysis"
 date: 2022-04-01
 author: "Armison.Huang"
-header-img: "img/post-bg.jpg"
+header-img: "img/post-bg.png"
 tags: []
 ---
-# 2022-03-29 Rendering a Scene with Deferre
+# Rendering a Scene with Deferre
 
 Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减少光照的重复计算，通过实施延时光照渲染来进行优化。
 
-# 概述
+## 概述
 
 通过Apple例子来看一下延时光照渲染实施方法，这个例子应用shadow map（阴影贴图）实现阴影，并使用模版缓冲区剔除光量。
 
@@ -19,11 +19,11 @@ Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减�
 
 与 Forward lighting相比，Deferred lighting可以渲染大量的灯光数量。比如，在Forward lighting模式下，如果场景中有很多光源，无法对每个光源在每个片元上作用的计算量进行全量计算。需要应用到复杂的排序和像素合并算法来筛除对每个片元能产生作用的光源来限制计算量。使用Deferred lighting，可以容易地将多个光源应用到场景中。
 
-# 重要概念
+## 重要概念
 
 在开始解读示例代码的之前，回顾一下以下概念可以更好的理解关键细节。
 
-## 传统延时光照渲染
+### 传统延时光照渲染
 
 传统延时光照渲染通常分为两个渲染通道：
 
@@ -34,7 +34,7 @@ Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减�
 
 一些macOS的GPU是"即时渲染"（IMR）架构。IMR GPU延时光照只能通过两个渲染通道实现。所以这个例子的macOS版本实现了两个通道的延时光照算法。
 
-## Apple芯片GPU上的单通道延时光照
+### Apple芯片GPU上的单通道延时光照
 
 Apple芯片GPU使用了基于磁贴分片的延迟渲染（TBDR）架构，TBDR架构在GPU内部专门为第一块磁贴设计了内存来存储渲染数据。渲染结果存储到磁贴内存中，可以避免数据在GPU和系统内存中所花费的大量资源消耗，GPU和系统内存DDR是通过带宽受限的内存总线交换数据。GPU什么时候需要将磁贴内存写入到系统内存取决于以下配置情况：
 
@@ -47,7 +47,7 @@ G- Buffer在单个渲染通道由GPU（而不是CPU）生成和使用。因此�
 ![](image/image_3.png "")
 
 允许TBDR GPU从片元函数中附加的渲染目标读取数据的特性称为"可编程混合"
-## 具有栅格顺序组的延时光照
+### 具有栅格顺序组的延时光照
 默认情况下，当片元着色器将数据写入像素时，GPU会等到着色程序完全完成对该像素的写入后，再开始为同一个像素执行另一个片元着色程序。
 ![](image/image_4.png "")
 
@@ -113,7 +113,6 @@ encodePass(into: commandBuffer,
     encodeFairyBillboardStage(using: renderEncoder)
 }
 ```
-
 
 ## 渲染阴影贴图
 
