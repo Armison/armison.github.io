@@ -14,7 +14,7 @@ Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减�
 
 通过Apple例子来看一下延时光照渲染实施方法，这个例子应用shadow map（阴影贴图）实现阴影，并使用模版缓冲区剔除光量。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image.png)
 
 与 Forward lighting相比，Deferred lighting可以渲染大量的灯光数量。比如，在Forward lighting模式下，如果场景中有很多光源，无法对每个光源在每个片元上作用的计算量进行全量计算。需要应用到复杂的排序和像素合并算法来筛除对每个片元能产生作用的光源来限制计算量。使用Deferred lighting，可以容易地将多个光源应用到场景中。
 
@@ -29,7 +29,7 @@ Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减�
 - 第一个渲染通道：G-buffer 渲染。渲染器绘制和变换场景里的模型，片元函数将渲染结果输出到 "几何缓冲区" 和 "G-Buffer"中。G-Buffer包含了模型的材料颜色信息，以及每个片元的法线、阴影和深度信息。
 - 第二个渲染通道：延时光照和构图。渲染器绘制每个光柱，使用G-Buffer中的数据重建每个片元的位置信息并应用光照计算。绘制光源时，该光源输出为混合前一个光源的输出后的结果。最后，渲染器将其他数据（如阴影和定向光照）合成到场景中。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image1.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image1.png)
 
 一些macOS的GPU是"即时渲染"（IMR）架构。IMR GPU延时光照只能通过两个渲染通道实现。所以这个例子的macOS版本实现了两个通道的延时光照算法。
 
@@ -40,26 +40,31 @@ Apple芯片GPU使用了基于磁贴分片的延迟渲染（TBDR）架构，TBDR�
 - 应用程序主动执行了存储命令
 - 应用程序纹理的存储模式
 将 "MTLStoreAction.store"设置为存储操作时，渲染通道中的渲染目标的输出数据将从磁贴内存中写入系统内存。如果这些数据将用于后续的渲染通道，这些纹理将做为输入数据从系统内存中读入到GPU的纹理缓存中。因此，传统的延时光照渲染器要求第一次和第二次渲染通道之间将G-Buffer数据存储在系统内存中。
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image2.png "")
+
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image2.png)
+
 由于TBDR架构允许在任何时间从磁贴内存中读取数据。这允许片元着色器从磁贴内存中读取数据并对渲染目标进行计算，然后将数据再次写入磁贴内存。这个特性避免了在第一次和第二次渲染通道之间将G-Buffer数据存储到系统内存中。所以，TBDR架构下延迟光照渲染器可以通过单个渲染通道实现。
 G- Buffer在单个渲染通道由GPU（而不是CPU）生成和使用。因此，在渲染通道开始之前，不会从系统内存中加载数据，也不会在渲染通道完成后将结果存储在系统内存中。光照片元函数不是从系统内存中的纹理读取G-Buffer数据，而是从G-Buffer读取数据，同时它仍然作为渲染目标附加到渲染通道。因此，不需要为G-Buffer纹理分配系统内存，可以使用MTLStorageMode.memoryless存储模式声明这些纹理。
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image3.png "")
+
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image3.png)
 
 允许TBDR GPU从片元函数中附加的渲染目标读取数据的特性称为"可编程混合"
 ## 具有栅格顺序组的延时光照
 默认情况下，当片元着色器将数据写入像素时，GPU会等到着色程序完全完成对该像素的写入后，再开始为同一个像素执行另一个片元着色程序。
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image4.png "")
+
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image4.png)
 
 栅格顺序组允许应用程序增加GPU片元着色器的并行化。使用栅格顺序组，片元函数可以将渲染目标分隔到不同的执行组中。这种分离执行允许GPU在片元着色器的上一个实例完成时将数据写入另一个组的像素之前，读取一个组中的渲染目标并对其执行计算。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image5.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image5.png)
+
 在示例程序中，一些光照片元函数使用了栅格顺序组：
 - Raster order group 0. "AAPLLightingROG" 用于包含光照计算结果的渲染目标
 - Raster order group 1. "AAPLGBufferROG" 用于光照函数中G-Buffer数据。
 
 这些栅格顺序组允许GPU在上一个片元着色器完成光照计算并写入输出数据之前读取片元着色器中的G-Buffer并执行光照计算。
 
-# 渲染延时光照帧
+## 渲染延时光照帧
 
 这个示例通过以下阶段来显示完整帧：
 
@@ -114,11 +119,11 @@ encodePass(into: commandBuffer,
 ```
 
 
-# 渲染阴影贴图
+## 渲染阴影贴图
 
 示例程序通过从光源的透视渲染模型，为场景中的单个定向光源（太阳）渲染阴影贴图。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image6.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image6.png)
 
 阴影贴图的渲染管线有顶点函数，但是没有片元函数。因此，这个示例程序无需执行渲染管线的后续阶段就可确定写入阴影贴图的屏幕空间深度值。渲染器执行由于没有片元函数，因此执行很快。
 
@@ -155,7 +160,7 @@ gBuffer.normal_shadow = half4(eye_normal.xyz, shadow_sample);
 
 在定向光和点光源合成阶段，示例程序从G-Buffer中读取阴影值并应用到片元上。
 
-# 渲染G-Buffer
+## 渲染G-Buffer
 
 示例程序包含以下纹理：
 
@@ -163,7 +168,7 @@ gBuffer.normal_shadow = half4(eye_normal.xyz, shadow_sample);
 - normalShadow：存储法线和阴影数据。法线数据存储在 "x", "y"和"z"分量中，阴影数据存储在"w"分量中。
 - depth：存储视野空间的深度信息值。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image7.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image7.png)
 
 示例程序渲染G-Buffer，传统渲染器和单通道延时渲染器都将所有G-Buffer纹理做为渲染通道的渲染目标。然而，由于使用TBDR架构的设备即可以渲染G-Buffer，也可以在单渲染通道中读取G-Buffer。因此这个示例程序将创建具有无内存存储模式的G-Buffer纹理，这表示不会为这些纹理分配系统内存。相反，这些纹理仅在渲染通道期间在磁贴内存中分配和填充。
 
@@ -173,11 +178,12 @@ gBuffer.normal_shadow = half4(eye_normal.xyz, shadow_sample);
 var storageMode = MTLStorageMode.private
 ```
 
+
 对于传统的延迟渲染，在示例程序完成了G-Buffer纹理的写数据后，它会调用"endEncoding"方法来完成G-Buffer渲染通道。由于渲染命令编码器的存储操作设置为"MTLStoreAction.store",因此GPU会在编码器完成执行后将每个渲染目标纹理写入"Video"内存。这允许示例程序在随后的延迟光照和构图渲染通道中从"Video"内存中读取这些数据。
 
 对于单通道延迟渲染器，在示例程序完成G-Buffer纹理写入数据后，示例程序不会完成渲染命令编码器，而是继续将其用于后续阶段。
 
-# 应用定向光照和阴影
+## 应用定向光照和阴影
 
 该示例程序将定向光照和阴影应用于要显示的可绘制对象。
 
@@ -225,7 +231,7 @@ deferred_directional_lighting_fragment_single_pass(
 
 由于"DepthStencilStates"对象的"directionalLighting"属性的状态，"deferred_directional_lighting_fragment"函数仅对应点亮的片元执行。这种优化简单而重要，可以节省许多片元着色器执行的周期。
 
-# 剔除光源体积
+## 剔除光源体积
 
 这个示例程序创建一个模版蒙板，用来避免对许多片元执行昂贵的光照计算。它通过使用G-Buffer通道中的深度缓冲区和模版缓冲区来创建此模版蒙板，以跟踪光体积与其他几何体相交。（如果没有相交，那么它就不会照亮任何东西）
 
@@ -300,13 +306,13 @@ renderEncoder.draw(meshes: [scene.icosahedron],
 
 下面显示了使用此模版蒙板算法的渲染帧与不使用此模版蒙板算法的渲染帧在片元覆盖率方面的差异。算法使能后，绿色像素是为其执行点光源片元函数的像素。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image8.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image8.png)
 
 禁用算法时，绿色和红色的像素是其执行点光源片元函数的像素。
 
-![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image9.png "")
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/02/image9.png)
 
-# 渲染天空盒和彩色光源
+## 渲染天空盒和彩色光源
 
 在最终的光照阶段，示例程序将更简单的光照技术应用到场景中。
 
