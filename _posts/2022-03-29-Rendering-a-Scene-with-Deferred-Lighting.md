@@ -16,7 +16,7 @@ Tile-based模式的GPU光照的计算是非常消耗计算资源的，为了减�
 
 通过Apple例子来看一下延时光照渲染实施方法，这个例子应用shadow map（阴影贴图）实现阴影，并使用模版缓冲区剔除光量。
 
-![16492387801023](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/06/16492387801023.jpg)
+![](https://armison-blog-1309315531.cos.ap-shanghai.myqcloud.com/2022/04/06/16492387801023.jpg)
 
 与 Forward lighting相比，Deferred lighting可以渲染大量的灯光数量。比如，在Forward lighting模式下，如果场景中有很多光源，无法对每个光源在每个片元上作用的计算量进行全量计算。需要应用到复杂的排序和像素合并算法来筛除对每个片元能产生作用的光源来限制计算量。使用Deferred lighting，可以容易地将多个光源应用到场景中。
 
