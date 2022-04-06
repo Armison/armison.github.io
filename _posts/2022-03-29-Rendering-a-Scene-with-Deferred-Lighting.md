@@ -1,5 +1,3 @@
-# 2022-04-01-Rendering-a-Scene-with-Deferred-Lighting
-
 ---
 layout: post
 title: "Rendering a Scene with Deferred Lighting"
